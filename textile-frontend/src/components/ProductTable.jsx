@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Search, Edit, Trash2, Plus } from 'lucide-react';
+import { Package, Search, Edit, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import { toast } from 'sonner';
+import EditProductDialog from './EditProductDialog';
 
-const ProductTable = () => {
+const ProductTable = ({ refreshTrigger }) => {
   const [products, setProducts] = useState([]);
+  const [inventoryData, setInventoryData] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
@@ -14,10 +17,13 @@ const ProductTable = () => {
     fabric_type: '',
     size_set: ''
   });
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     fetchProducts();
-  }, [filters]);
+    fetchInventory();
+  }, [filters, refreshTrigger]);
 
   const fetchProducts = async () => {
     try {
@@ -38,6 +44,68 @@ const ProductTable = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchInventory = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/inventory');
+      const data = await response.json();
+      
+      // Convert array to object for easy lookup by product_id
+      const inventoryMap = {};
+      data.forEach(item => {
+        inventoryMap[item.product_id] = item;
+      });
+      setInventoryData(inventoryMap);
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+    }
+  };
+
+  const getStockQuantity = (productId) => {
+    return inventoryData[productId]?.stock_quantity || 0;
+  };
+
+  const getStockStatus = (productId) => {
+    const stock = getStockQuantity(productId);
+    const threshold = inventoryData[productId]?.low_stock_threshold || 10;
+    
+    if (stock === 0) return { variant: 'destructive', text: 'Out of Stock' };
+    if (stock <= threshold) return { variant: 'destructive', text: 'Low Stock' };
+    return { variant: 'default', text: 'In Stock' };
+  };
+
+  const handleEdit = (product) => {
+    setEditingProduct(product);
+    setShowEditDialog(true);
+  };
+
+  const handleDelete = async (productId, productCode) => {
+    if (!confirm(`Are you sure you want to delete product ${productCode}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/products/${productCode}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete product');
+      }
+
+      toast.success('Product deleted successfully!');
+      fetchProducts(); // Refresh the list
+      fetchInventory(); // Refresh inventory data
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error('Error deleting product');
+    }
+  };
+
+  const handleProductUpdated = () => {
+    fetchProducts(); // Refresh the list
+    fetchInventory(); // Refresh inventory data
   };
 
   const handleSearch = (e) => {
@@ -157,38 +225,67 @@ const ProductTable = () => {
                     <th className="h-12 px-4 text-left align-middle font-medium">Color</th>
                     <th className="h-12 px-4 text-left align-middle font-medium">Size Set</th>
                     <th className="h-12 px-4 text-left align-middle font-medium">Price</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium">Stock</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium">Status</th>
                     <th className="h-12 px-4 text-left align-middle font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
-                    <tr key={product.id} className="border-b">
-                      <td className="p-4 align-middle font-medium">{product.product_code}</td>
-                      <td className="p-4 align-middle">{product.cloth_type}</td>
-                      <td className="p-4 align-middle">{product.fabric_type}</td>
-                      <td className="p-4 align-middle">{product.color}</td>
-                      <td className="p-4 align-middle">{getSizeSetBadge(product.size_set)}</td>
-                      <td className="p-4 align-middle">
-                        {product.unit_price ? `$${product.unit_price}` : '-'}
-                      </td>
-                      <td className="p-4 align-middle">
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="destructive" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {products.map((product) => {
+                    const stockStatus = getStockStatus(product.id);
+                    return (
+                      <tr key={product.id} className="border-b">
+                        <td className="p-4 align-middle font-medium">{product.product_code}</td>
+                        <td className="p-4 align-middle">{product.cloth_type}</td>
+                        <td className="p-4 align-middle">{product.fabric_type}</td>
+                        <td className="p-4 align-middle">{product.color}</td>
+                        <td className="p-4 align-middle">{getSizeSetBadge(product.size_set)}</td>
+                        <td className="p-4 align-middle">
+                          {product.unit_price ? `$${product.unit_price}` : '-'}
+                        </td>
+                        <td className="p-4 align-middle font-medium">
+                          {getStockQuantity(product.id)} sets
+                        </td>
+                        <td className="p-4 align-middle">
+                          <Badge variant={stockStatus.variant}>
+                            {stockStatus.text}
+                          </Badge>
+                        </td>
+                        <td className="p-4 align-middle">
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleEdit(product)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              onClick={() => handleDelete(product.id, product.product_code)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Product Dialog */}
+      <EditProductDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        product={editingProduct}
+        onProductUpdated={handleProductUpdated}
+      />
     </div>
   );
 };
