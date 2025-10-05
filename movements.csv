@@ -1,0 +1,3 @@
+"Date","Product_Code","Cloth_Type","Fabric_Type","Movement_Type","Quantity","Reason","Created_By","Notes"
+"05.10.2025","22011","DRESS","COTTON","OUT",15,"SALE","admin","Customer order"
+"05.10.2025","22011","DRESS","COTTON","IN",50,"PURCHASE","admin","Initial stock"
