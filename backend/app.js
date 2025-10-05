@@ -2,15 +2,19 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const securityMiddleware = require('./middleware/security');
+const { apiLimiter } = require('./middleware/rateLimit');
+const setupswagger = require('./config/swagger');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security middleware (add at the top, before other middleware)
 app.use(securityMiddleware);
-
+app.use('/api', apiLimiter); // Apply rate limiting to all /api routes
+app.use(cors());
 // Existing middleware
 app.use(express.json());
+setupswagger(app);
 
 // Routes
 app.use('/api', require('./routes/productRoutes'));
