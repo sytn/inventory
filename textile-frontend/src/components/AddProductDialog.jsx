@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { toast } from 'sonner';
+import { apiClient } from '../utils/api';
 
 const AddProductDialog = ({ open, onOpenChange, onProductAdded }) => {
   const [formData, setFormData] = useState({
@@ -14,7 +15,8 @@ const AddProductDialog = ({ open, onOpenChange, onProductAdded }) => {
     color: '',
     size_set: '',
     unit_price: '',
-    description: ''
+    description: '',
+    initial_stock: ''
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -27,7 +29,8 @@ const AddProductDialog = ({ open, onOpenChange, onProductAdded }) => {
       color: '',
       size_set: '',
       unit_price: '',
-      description: ''
+      description: '',
+      initial_stock: ''
     });
     setErrors({});
   };
@@ -70,68 +73,48 @@ const AddProductDialog = ({ open, onOpenChange, onProductAdded }) => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!validateForm()) return;
+    e.preventDefault();
+    
+    if (!validateForm()) return;
 
-  setLoading(true);
-  try {
-    // Create product first (without initial_stock)
-    const productData = { ...formData };
-    delete productData.initial_stock;
+    setLoading(true);
+    try {
+      // Create product first (without initial_stock)
+      const productData = { ...formData };
+      delete productData.initial_stock;
 
-    const productResponse = await fetch('http://localhost:5000/api/products', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      const newProduct = await apiClient.post('/products', {
         ...productData,
         unit_price: productData.unit_price ? parseFloat(productData.unit_price) : null
-      }),
-    });
+      });
 
-    if (!productResponse.ok) {
-      const errorData = await productResponse.json();
-      throw new Error(errorData.message || 'Failed to create product');
-    }
-
-    const newProduct = await productResponse.json();
-
-    // If initial stock provided, wait a moment then create stock movement
-    if (formData.initial_stock && formData.initial_stock > 0) {
-      // Small delay to ensure inventory is created
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const stockResponse = await fetch('http://localhost:5000/api/stock-movements', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // If initial stock provided, create stock movement
+      if (formData.initial_stock && formData.initial_stock > 0) {
+        // Small delay to ensure inventory is created
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        await apiClient.post('/stock-movements', {
           product_id: newProduct.id,
           movement_type: 'IN',
           quantity: parseInt(formData.initial_stock),
           reason: 'PURCHASE',
-          notes: 'Initial stock',
-          created_by: 'admin'
-        }),
-      });
-
-      if (!stockResponse.ok) {
-        const errorData = await stockResponse.json();
-        throw new Error(`Product created but failed to add initial stock: ${errorData.message}`);
+          notes: 'Initial stock'
+          // created_by is automatically added by backend from JWT token
+        });
       }
-    }
 
-    resetForm();
-    onOpenChange(false);
-    if (onProductAdded) onProductAdded();
-    toast.success('Product created successfully!');
-    
-  } catch (error) {
-    console.error('Error creating product:', error);
-    toast.error(`Error: ${error.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
+      resetForm();
+      onOpenChange(false);
+      if (onProductAdded) onProductAdded();
+      toast.success('Product created successfully!');
+      
+    } catch (error) {
+      console.error('Error creating product:', error);
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!open) return null;
 
@@ -260,6 +243,7 @@ const AddProductDialog = ({ open, onOpenChange, onProductAdded }) => {
                 placeholder="e.g., 29.99"
               />
             </div>
+
             {/* Stock Quantity */}
             <div className="space-y-2">
               <Label htmlFor="initial_stock">Initial Stock Quantity</Label>

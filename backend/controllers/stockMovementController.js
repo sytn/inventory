@@ -5,7 +5,7 @@ const stockMovementController = {
   // Create stock movement and update inventory
   async createMovement(req, res) {
     try {
-      const { product_id, movement_type, quantity, reason, notes, created_by } = req.body;
+      const { product_id, movement_type, quantity, reason, notes } = req.body;
 
       // Validate movement data
       if (!['IN', 'OUT'].includes(movement_type)) {
@@ -29,14 +29,14 @@ const stockMovementController = {
         });
       }
 
-      // Create stock movement
+      // Create stock movement with authenticated user
       const movement = await StockMovement.create({
         product_id,
         movement_type,
         quantity,
         reason,
         notes,
-        created_by: created_by || 'system'
+        created_by: req.user.username // Use authenticated user
       });
 
       // Update inventory

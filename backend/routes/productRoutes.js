@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
 const { validateProduct, validateSearch, handleValidationErrors } = require('../middleware/validation');
+const authMiddleware = require('../middleware/auth');
 
 /**
  * @swagger
@@ -16,6 +17,8 @@ const { validateProduct, validateSearch, handleValidationErrors } = require('../
  *   post:
  *     summary: Create a new product
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -35,8 +38,10 @@ const { validateProduct, validateSearch, handleValidationErrors } = require('../
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
  */
-router.post('/products', validateProduct, handleValidationErrors, productController.createProduct);
+router.post('/products', authMiddleware(['admin']), validateProduct, handleValidationErrors, productController.createProduct);
 
 /**
  * @swagger
@@ -44,6 +49,8 @@ router.post('/products', validateProduct, handleValidationErrors, productControl
  *   get:
  *     summary: Get all products
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of all products
@@ -53,8 +60,10 @@ router.post('/products', validateProduct, handleValidationErrors, productControl
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Product'
+ *       401:
+ *         description: Unauthorized
  */
-router.get('/products', productController.getAllProducts);
+router.get('/products', authMiddleware(), productController.getAllProducts);
 
 /**
  * @swagger
@@ -62,6 +71,8 @@ router.get('/products', productController.getAllProducts);
  *   get:
  *     summary: Search and filter products
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: product_code
@@ -95,8 +106,10 @@ router.get('/products', productController.getAllProducts);
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Product'
+ *       401:
+ *         description: Unauthorized
  */
-router.get('/products/search', validateSearch, handleValidationErrors, productController.searchProducts);
+router.get('/products/search', authMiddleware(), validateSearch, handleValidationErrors, productController.searchProducts);
 
 /**
  * @swagger
@@ -104,6 +117,8 @@ router.get('/products/search', validateSearch, handleValidationErrors, productCo
  *   get:
  *     summary: Get product by code
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: code
@@ -118,10 +133,12 @@ router.get('/products/search', validateSearch, handleValidationErrors, productCo
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Product'
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Product not found
  */
-router.get('/products/:code', productController.getProductByCode);
+router.get('/products/:code', authMiddleware(), productController.getProductByCode);
 
 /**
  * @swagger
@@ -129,6 +146,8 @@ router.get('/products/:code', productController.getProductByCode);
  *   put:
  *     summary: Update a product
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: code
@@ -147,10 +166,12 @@ router.get('/products/:code', productController.getProductByCode);
  *         description: Product updated successfully
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Product not found
  */
-router.put('/products/:code', validateProduct, handleValidationErrors, productController.updateProduct);
+router.put('/products/:code', authMiddleware(['admin']), validateProduct, handleValidationErrors, productController.updateProduct);
 
 /**
  * @swagger
@@ -158,6 +179,8 @@ router.put('/products/:code', validateProduct, handleValidationErrors, productCo
  *   delete:
  *     summary: Delete a product
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: code
@@ -168,9 +191,11 @@ router.put('/products/:code', validateProduct, handleValidationErrors, productCo
  *     responses:
  *       200:
  *         description: Product deleted successfully
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Product not found
  */
-router.delete('/products/:code', productController.deleteProduct);
+router.delete('/products/:code', authMiddleware(['admin']), productController.deleteProduct);
 
 module.exports = router;

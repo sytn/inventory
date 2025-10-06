@@ -22,6 +22,7 @@ app.use('/api', require('./routes/inventoryRoutes'));
 app.use('/api', require('./routes/stockMovementRoutes'));
 app.use('/api', require('./routes/reportRoutes'));
 app.use('/api', require('./routes/exportRoutes'));
+app.use('/api/auth', require('./routes/authRoutes'));
 
 // Basic route
 app.get('/', (req, res) => {

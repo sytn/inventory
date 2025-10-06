@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
 import EditProductDialog from './EditProductDialog';
+import { apiClient } from '../utils/api';
 
 const ProductTable = ({ refreshTrigger }) => {
   const [products, setProducts] = useState([]);
@@ -35,12 +36,12 @@ const ProductTable = ({ refreshTrigger }) => {
       if (filters.fabric_type) queryParams.append('fabric_type', filters.fabric_type);
       if (filters.size_set) queryParams.append('size_set', filters.size_set);
 
-      const url = `http://localhost:5000/api/products${queryParams.toString() ? `/search?${queryParams.toString()}` : ''}`;
-      const response = await fetch(url);
-      const data = await response.json();
+      const endpoint = `/products${queryParams.toString() ? `/search?${queryParams.toString()}` : ''}`;
+      const data = await apiClient.get(endpoint);
       setProducts(data);
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -48,8 +49,7 @@ const ProductTable = ({ refreshTrigger }) => {
 
   const fetchInventory = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/inventory');
-      const data = await response.json();
+      const data = await apiClient.get('/inventory');
       
       // Convert array to object for easy lookup by product_id
       const inventoryMap = {};
@@ -59,6 +59,7 @@ const ProductTable = ({ refreshTrigger }) => {
       setInventoryData(inventoryMap);
     } catch (error) {
       console.error('Error fetching inventory:', error);
+      toast.error('Failed to load inventory data');
     }
   };
 
@@ -86,14 +87,7 @@ const ProductTable = ({ refreshTrigger }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${productCode}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete product');
-      }
-
+      await apiClient.delete(`/products/${productCode}`);
       toast.success('Product deleted successfully!');
       fetchProducts(); // Refresh the list
       fetchInventory(); // Refresh inventory data
