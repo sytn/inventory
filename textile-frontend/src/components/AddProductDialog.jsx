@@ -76,31 +76,53 @@ const AddProductDialog = ({ open, onOpenChange, onProductAdded }) => {
 
   setLoading(true);
   try {
-    const response = await fetch('http://localhost:5000/api/products', {
+    // Create product first (without initial_stock)
+    const productData = { ...formData };
+    delete productData.initial_stock;
+
+    const productResponse = await fetch('http://localhost:5000/api/products', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ...formData,
-        unit_price: formData.unit_price ? parseFloat(formData.unit_price) : null
+        ...productData,
+        unit_price: productData.unit_price ? parseFloat(productData.unit_price) : null
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
+    if (!productResponse.ok) {
+      const errorData = await productResponse.json();
       throw new Error(errorData.message || 'Failed to create product');
     }
 
-    const newProduct = await response.json();
-    
+    const newProduct = await productResponse.json();
+
+    // If initial stock provided, wait a moment then create stock movement
+    if (formData.initial_stock && formData.initial_stock > 0) {
+      // Small delay to ensure inventory is created
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const stockResponse = await fetch('http://localhost:5000/api/stock-movements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_id: newProduct.id,
+          movement_type: 'IN',
+          quantity: parseInt(formData.initial_stock),
+          reason: 'PURCHASE',
+          notes: 'Initial stock',
+          created_by: 'admin'
+        }),
+      });
+
+      if (!stockResponse.ok) {
+        const errorData = await stockResponse.json();
+        throw new Error(`Product created but failed to add initial stock: ${errorData.message}`);
+      }
+    }
+
     resetForm();
     onOpenChange(false);
-    
-    if (onProductAdded) {
-      onProductAdded();
-    }
-    
+    if (onProductAdded) onProductAdded();
     toast.success('Product created successfully!');
     
   } catch (error) {
@@ -110,7 +132,6 @@ const AddProductDialog = ({ open, onOpenChange, onProductAdded }) => {
     setLoading(false);
   }
 };
-
 
   if (!open) return null;
 
@@ -237,6 +258,18 @@ const AddProductDialog = ({ open, onOpenChange, onProductAdded }) => {
                 value={formData.unit_price}
                 onChange={(e) => handleChange('unit_price', e.target.value)}
                 placeholder="e.g., 29.99"
+              />
+            </div>
+            {/* Stock Quantity */}
+            <div className="space-y-2">
+              <Label htmlFor="initial_stock">Initial Stock Quantity</Label>
+              <Input
+                id="initial_stock"
+                type="number"
+                min="0"
+                value={formData.initial_stock || ''}
+                onChange={(e) => handleChange('initial_stock', e.target.value)}
+                placeholder="e.g., 50"
               />
             </div>
 

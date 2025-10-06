@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Package, TrendingDown, AlertTriangle, Download } from 'lucide-react';
+import { Package, TrendingDown, AlertTriangle, Download, Plus, Minus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import StockMovementDialog from './StockMovementDialog';
 
 const InventoryDashboard = () => {
   const [inventory, setInventory] = useState([]);
   const [lowStock, setLowStock] = useState([]);
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showStockDialog, setShowStockDialog] = useState(false);
+
+  const handleStockMovement = (product) => {
+    setSelectedProduct(product);
+    setShowStockDialog(true);
+  }
+
+  const handleStockUpdated = () => {
+    fetchInventoryData();
+  }
 
   useEffect(() => {
     fetchInventoryData();
@@ -107,7 +119,18 @@ const InventoryDashboard = () => {
                     <span className="text-destructive font-medium">
                       Stock: {item.stock_quantity} (Threshold: {item.low_stock_threshold})
                     </span>
-                    <Button variant="outline" size="sm">Restock</Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleStockMovement({
+                        id: item.product_id,
+                        product_code: item.products?.product_code,
+                        cloth_type: item.products?.cloth_type,
+                        fabric_type: item.products?.fabric_type
+                      })}
+                    >
+                      Adjust Stock
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -184,6 +207,7 @@ const InventoryDashboard = () => {
                     <th className="h-12 px-4 text-left align-middle font-medium">Current Stock</th>
                     <th className="h-12 px-4 text-left align-middle font-medium">Threshold</th>
                     <th className="h-12 px-4 text-left align-middle font-medium">Status</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -213,6 +237,22 @@ const InventoryDashboard = () => {
                             {status.text}
                           </Badge>
                         </td>
+                        <td className="p-4 align-middle">
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleStockMovement({
+                                id: item.product_id,
+                                product_code: item.products?.product_code,
+                                cloth_type: item.products?.cloth_type,
+                                fabric_type: item.products?.fabric_type
+                              })}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -222,6 +262,14 @@ const InventoryDashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Stock Movement Dialog */}
+      <StockMovementDialog
+        open={showStockDialog}
+        onOpenChange={setShowStockDialog}
+        product={selectedProduct}
+        onStockUpdated={handleStockUpdated}
+      />
     </div>
   );
 };

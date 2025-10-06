@@ -1,4 +1,5 @@
 const { supabase } = require('../config/supabase');
+const Inventory = require('./Inventory');
 
 class Product {
   static async create(productData) {
@@ -9,6 +10,16 @@ class Product {
       .single();
 
     if (error) throw error;
+    
+    // Auto-create inventory record for the new product
+    try {
+      await Inventory.create(data.id);
+      console.log(`Inventory record created for product ${data.id}`);
+    } catch (inventoryError) {
+      console.error('Failed to create inventory record:', inventoryError);
+      // Continue anyway - the product was created successfully
+    }
+    
     return data;
   }
 
