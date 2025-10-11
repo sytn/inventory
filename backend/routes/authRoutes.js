@@ -1,5 +1,5 @@
 const { supabase } = require('../config/supabase');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
@@ -155,6 +155,22 @@ router.delete('/users/:id', authMiddleware(['admin']), async (req, res) => {
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Temporary test route - remove later
+router.get('/test-activity', async (req, res) => {
+  try {
+    const ActivityLog = require('../models/ActivityLog');
+    const testLog = await ActivityLog.create({
+      user_id: 1,
+      action: 'test_action',
+      resource_type: 'test',
+      details: { message: 'Testing activity log' }
+    });
+    res.json({ success: true, log: testLog });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

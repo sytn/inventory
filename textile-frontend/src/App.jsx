@@ -11,6 +11,7 @@ import { Toaster } from 'sonner';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { apiClient } from './utils/api';
+import AdminDashboard from './components/AdminDashboard';
 
 function App() {
   return (
@@ -45,17 +46,17 @@ function AppContent() {
   }, [user]);
 
   const fetchStats = async () => {
-  try {
-    const data = await apiClient.get('/reports/inventory-summary');
-    setStats({
-      totalProducts: data.totalProducts,
-      totalStock: data.totalStock,
-      lowStockItems: data.lowStockItems
-    });
-  } catch (error) {
-    console.error('Error fetching stats:', error);
-  }
-};
+    try {
+      const data = await apiClient.get('/reports/inventory-summary');
+      setStats({
+        totalProducts: data.totalProducts,
+        totalStock: data.totalStock,
+        lowStockItems: data.lowStockItems
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
   // Show loading state
   if (loading) {
@@ -161,11 +162,20 @@ function AppContent() {
           >
             Inventory
           </Button>
+          {user.role === 'admin' && (
+            <Button
+              variant={activeTab === 'admin' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('admin')}
+            >
+              Admin
+            </Button>
+          )}
         </div>
 
         {/* Content */}
         {activeTab === 'products' && <ProductTable refreshTrigger={refreshTrigger} />}
         {activeTab === 'inventory' && <InventoryDashboard />}
+        {activeTab === 'admin' && <AdminDashboard />}
       </div>
 
       {/* Add Product Dialog - Only for admins */}
@@ -180,7 +190,7 @@ function AppContent() {
   );
 }
 
-// Simple Badge component (add this or import from your UI components)
+// Simple Badge component
 const Badge = ({ variant = 'default', children, className }) => {
   const variantClasses = {
     default: 'bg-primary text-primary-foreground',
